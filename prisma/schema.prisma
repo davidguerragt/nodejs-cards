@@ -1,0 +1,21 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model CreditCard {
+  id              String   @id @default(cuid())
+  holderName      String   @db.VarChar(120)
+  brand           String   @db.VarChar(40)
+  lastFour        String   @db.Char(4)
+  expirationMonth Int
+  expirationYear  Int
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([holderName])
+}
