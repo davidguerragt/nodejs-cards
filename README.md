@@ -30,13 +30,13 @@ Ejemplo de creación:
 ```json
 {
   "holderName": "Ana Pérez",
+  "cardNumber": "4111111111111111",
   "brand": "Visa",
+  "securityCode": "123",
   "expirationMonth": 12,
   "expirationYear": 2030
 }
 ```
-
-La respuesta del alta incluye un número sintético de prueba generado para la marca elegida. Si se cambia la marca con `PATCH`, se genera otro número y se devuelve en esa respuesta.
 
 ## Estructura
 
@@ -45,4 +45,4 @@ La respuesta del alta incluye un número sintético de prueba generado para la m
 - `infrastructure`: cliente Prisma y adaptador MySQL
 - `interfaces/http`: rutas, controladores, esquemas de validación y errores
 
-La API genera números sintéticos con prefijos y longitudes correspondientes a Visa, Mastercard, American Express y Discover, además de un dígito de control Luhn. Solo devuelve el número completo en la respuesta de creación o al cambiar la marca; MySQL almacena únicamente la marca y los últimos cuatro dígitos. Estos números son para pruebas locales, no para procesar pagos. Nunca se recibe ni se almacena un CVV.
+La API valida que `cardNumber` coincida con `brand` mediante prefijo, longitud y dígito de control Luhn. También valida `securityCode`: 3 dígitos para Visa, Mastercard y Discover; 4 para American Express. Acepta números con espacios o guiones, pero solo persiste la marca y los últimos cuatro dígitos; nunca devuelve ni almacena el número completo ni el código de seguridad. El código solo se valida durante la creación y no se admite en `PATCH`.

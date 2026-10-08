@@ -1,8 +1,8 @@
 import type { NextFunction, Request, Response } from "express";
 import { CreditCardService } from "../../application/credit-cards/credit-card-service";
-import { generateCardNumber } from "../../domain/services/card-number";
+import { getCardNumberDetails } from "../../domain/services/card-number";
 import { HttpError } from "../../shared/http-error";
-import { createCreditCardSchema, updateCreditCardSchema } from "./credit-card-schemas";
+import { createCreditCardWithSecurityCodeSchema, updateCreditCardSchema } from "./credit-card-schemas";
 
 const getCardId = (request: Request) => {
     const id = request.params.id;
@@ -32,11 +32,12 @@ export class CreditCardController {
 
     create = async (request: Request, response: Response, next: NextFunction) => {
         try {
-            const input = createCreditCardSchema.parse(request.body);
-            const generated = generateCardNumber(input.brand);
-            const { cardNumber, brand, lastFour } = generated;
-            const card = await this.service.create({ ...input, brand, lastFour });
-            response.status(201).json({ ...card, cardNumber, testOnly: true });
+            const input = createCreditCardWithSecurityCodeSchema.parse(request.body);
+            const { cardNumber, brand, securityCode: _securityCode, ...fields } = input;
+            const details = getCardNumberDetails(cardNumber);
+            if (!details || details.brand !== brand) throw new HttpError(400, "El número no corresponde con la marca indicada");
+
+            response.status(201).json(await this.service.create({ ...fields, brand, lastFour: details.lastFour }));
         } catch (error) {
             next(error);
         }
@@ -45,13 +46,16 @@ export class CreditCardController {
     update = async (request: Request, response: Response, next: NextFunction) => {
         try {
             const input = updateCreditCardSchema.parse(request.body);
-            const { brand, ...fields } = input;
-            const generated = brand ? generateCardNumber(brand) : undefined;
-            const card = await this.service.update(getCardId(request), {
+            const { cardNumber, brand, ...fields } = input;
+            const details = cardNumber ? getCardNumberDetails(cardNumber) : null;
+            if (cardNumber && (!details || details.brand !== brand)) {
+                throw new HttpError(400, "El número no corresponde con la marca indicada");
+            }
+
+            response.json(await this.service.update(getCardId(request), {
                 ...fields,
-                ...(generated ? { brand: generated.brand, lastFour: generated.lastFour } : {})
-            });
-            response.json(generated ? { ...card, cardNumber: generated.cardNumber, testOnly: true } : card);
+                ...(details && brand ? { brand, lastFour: details.lastFour } : {})
+            }));
         } catch (error) {
             next(error);
         }

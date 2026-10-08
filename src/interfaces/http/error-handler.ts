@@ -4,7 +4,8 @@ import { HttpError } from "../../shared/http-error";
 
 export const errorHandler: ErrorRequestHandler = (error, _request, response, _next) => {
     if (error instanceof ZodError) {
-        response.status(400).json({ message: "Datos inválidos", errors: error.issues });
+        const errors = error.issues.map(({ code, path, message }) => ({ code, path, message }));
+        response.status(400).json({ message: "Datos inválidos", errors });
         return;
     }
 
